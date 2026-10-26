@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MISEG - Escáner QR</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 520px;
+      margin: 20px auto;
+      padding: 16px;
+      color: #222;
+    }
+    button {
+      padding: 12px;
+      margin: 6px 0;
+      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #lectorQR {
+      width: 100%;
+      margin-top: 12px;
+    }
+    #resultado {
+      padding: 12px;
+      background: #f1f5f9;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <h2>MISEG — Escáner QR</h2>
+  <p>Escanea el código de una herramienta. Puedes escanear varias.</p>
+
+  <div id="lectorQR"></div>
+  <p id="resultado">Esperando para escanear...</p>
+  <button id="iniciar" type="button" onclick="iniciarEscaner()">Abrir cámara y escanear</button>
+  <button type="button" onclick="detenerEscaner()">Cerrar cámara</button>
+  <button type="button" onclick="copiarIDs()">Copiar IDs escaneados</button>
+  <button type="button" onclick="limpiarIDs()">Limpiar lista</button>
+
+  <h3>Herramientas escaneadas</h3>
+  <ol id="lista"></ol>
+
+  <script>
+    let escaner = null;
+    let iniciando = false;
+    const ids = [];
+
+    function mostrar(mensaje) {
+      document.getElementById("resultado").textContent = mensaje;
+    }
+
+    function actualizarLista() {
+      const lista = document.getElementById("lista");
+      lista.replaceChildren();
+      ids.forEach(id => {
+        const li = document.createElement("li");
+        li.textContent = id;
+        lista.appendChild(li);
+      });
+    }
+
+    async function iniciarEscaner() {
+      if (iniciando || escaner) return;
+
+      if (typeof Html5Qrcode === "undefined") {
+        mostrar("No se cargó la biblioteca del escáner. Revisa tu conexión.");
+        return;
+      }
+
+      iniciando = true;
+      mostrar("Solicitando acceso a la cámara...");
+
+      try {
+        escaner = new Html5Qrcode("lectorQR");
+        await escaner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          texto => {
+            const coincidencia = texto.match(/HER-\d{4}/i);
+            if (!coincidencia) {
+              mostrar("El QR no contiene un ID HER válido.");
+              return;
+            }
+
+            const id = coincidencia[0].toUpperCase();
+            if (!ids.includes(id)) {
+              ids.push(id);
+              actualizarLista();
+              mostrar("Agregado: " + id);
+            } else {
+              mostrar("Ya estaba en la lista: " + id);
+            }
+          },
+          () => {}
+        );
+        mostrar("Cámara activa. Escanea las herramientas una por una.");
+      } catch (error) {
+        escaner = null;
+        mostrar("No se pudo abrir la cámara: " + error);
+      } finally {
+        iniciando = false;
+      }
+    }
+
+    async function detenerEscaner() {
+      if (!escaner) return;
+      const lector = escaner;
+      escaner = null;
+      try {
+        await lector.stop();
+        await lector.clear();
+        mostrar("Cámara cerrada.");
+      } catch (error) {
+        mostrar("La cámara se cerró o ya estaba detenida.");
+      }
+    }
+
+    async function copiarIDs() {
+      if (!ids.length) {
+        mostrar("Primero escanea al menos una herramienta.");
+        return;
+      }
+
+      const texto = ids.join("\n");
+      try {
+        await navigator.clipboard.writeText(texto);
+        mostrar("IDs copiados. Puedes pegarlos donde los necesites.");
+      } catch (error) {
+        mostrar("No se pudo copiar automáticamente. Selecciona y copia la lista.");
+      }
+    }
+
+    function limpiarIDs() {
+      ids.length = 0;
+      actualizarLista();
+      mostrar("Lista limpia.");
+    }
+  </script>
+</body>
+</html>
