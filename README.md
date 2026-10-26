@@ -1,0 +1,1 @@
+# miseg-escaner-qr
