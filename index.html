@@ -40,6 +40,7 @@
   <button id="iniciar" type="button" onclick="iniciarEscaner()">Abrir cámara y escanear</button>
   <button type="button" onclick="detenerEscaner()">Cerrar cámara</button>
   <button type="button" onclick="copiarIDs()">Copiar IDs escaneados</button>
+  <button type="button" onclick="enviarAMISEG()">Enviar a MISEG</button>
   <button type="button" onclick="limpiarIDs()">Limpiar lista</button>
 
   <h3>Herramientas escaneadas</h3>
@@ -140,6 +141,21 @@
       actualizarLista();
       mostrar("Lista limpia.");
     }
+    function enviarAMISEG() {
+  if (!ids.length) {
+    mostrar("Primero escanea al menos una herramienta.");
+    return;
+  }
+
+  const destino =
+    "https://script.google.com/macros/s/AKfycbzsaQIgB7K7Mj5TETUKKXkJ9i48iAno1UNPTmEw9TqI-kB_3BkgPPP1ByphmSSf88gn4A/exec";
+
+  const parametros = new URLSearchParams({
+    ids: ids.join(",")
+  });
+
+  window.open(destino + "?" + parametros.toString(), "_blank");
+}
   </script>
 </body>
 </html>
