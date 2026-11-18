@@ -88,6 +88,7 @@ await escaner.start(
     fps: 10
   },
           texto => {
+            console.log("CONTENIDO DEL QR:", texto);
             const coincidencia = texto.match(/HER-\d{4}/i);
             if (!coincidencia) {
               mostrar("El QR no contiene un ID HER válido.");
