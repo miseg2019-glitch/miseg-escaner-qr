@@ -77,16 +77,15 @@
       mostrar("Solicitando acceso a la cámara...");
 
       try {
-        escaner = new Html5Qrcode("lectorQR");
+escaner = new Html5Qrcode("lectorQR", {
+  formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+  useBarCodeDetectorIfSupported: false
+});
+
 await escaner.start(
   { facingMode: "environment" },
   {
-    fps: 10,
-    videoConstraints: {
-      facingMode: "environment",
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    }
+    fps: 10
   },
           texto => {
             const coincidencia = texto.match(/HER-\d{4}/i);
