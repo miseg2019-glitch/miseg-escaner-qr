@@ -78,9 +78,24 @@
 
       try {
         escaner = new Html5Qrcode("lectorQR");
-        await escaner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 240, height: 240 } },
+await escaner.start(
+  {
+    facingMode: "environment",
+    videoConstraints: {
+      facingMode: "environment",
+      width: { ideal: 1920 },
+      height: { ideal: 1080 }
+    }
+  },
+  {
+    fps: 15,
+    qrbox: function(viewfinderWidth, viewfinderHeight) {
+      const size = Math.floor(
+        Math.min(viewfinderWidth, viewfinderHeight) * 0.85
+      );
+      return { width: size, height: size };
+    }
+  },
           texto => {
             const coincidencia = texto.match(/HER-\d{4}/i);
             if (!coincidencia) {
