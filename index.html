@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MISEG - Escáner QR</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <script src="https://unpkg.com/qr-scanner/qr-scanner.umd.min.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,6 +15,7 @@
       padding: 16px;
       color: #222;
     }
+
     button {
       padding: 12px;
       margin: 6px 0;
@@ -20,10 +23,19 @@
       font-size: 16px;
       cursor: pointer;
     }
+
     #lectorQR {
       width: 100%;
       margin-top: 12px;
+      background: #111;
+      overflow: hidden;
     }
+
+    #videoQR {
+      width: 100%;
+      display: block;
+    }
+
     #resultado {
       padding: 12px;
       background: #f1f5f9;
@@ -31,17 +43,37 @@
     }
   </style>
 </head>
+
 <body>
+
   <h2>MISEG — Escáner QR</h2>
   <p>Escanea el código de una herramienta. Puedes escanear varias.</p>
 
-  <div id="lectorQR"></div>
+  <div id="lectorQR">
+    <video id="videoQR" playsinline muted></video>
+  </div>
+
   <p id="resultado">Esperando para escanear...</p>
-  <button id="iniciar" type="button" onclick="iniciarEscaner()">Abrir cámara y escanear</button>
-  <button type="button" onclick="detenerEscaner()">Cerrar cámara</button>
-  <button type="button" onclick="copiarIDs()">Copiar IDs escaneados</button>
-  <button type="button" onclick="enviarAMISEG()">Enviar a MISEG</button>
-  <button type="button" onclick="limpiarIDs()">Limpiar lista</button>
+
+  <button type="button" onclick="iniciarEscaner()">
+    Abrir cámara y escanear
+  </button>
+
+  <button type="button" onclick="detenerEscaner()">
+    Cerrar cámara
+  </button>
+
+  <button type="button" onclick="copiarIDs()">
+    Copiar IDs escaneados
+  </button>
+
+  <button type="button" onclick="enviarAMISEG()">
+    Enviar a MISEG
+  </button>
+
+  <button type="button" onclick="limpiarIDs()">
+    Limpiar lista
+  </button>
 
   <h3>Herramientas escaneadas</h3>
   <ol id="lista"></ol>
@@ -51,6 +83,8 @@
     let iniciando = false;
     const ids = [];
 
+    const video = document.getElementById("videoQR");
+
     function mostrar(mensaje) {
       document.getElementById("resultado").textContent = mensaje;
     }
@@ -58,6 +92,7 @@
     function actualizarLista() {
       const lista = document.getElementById("lista");
       lista.replaceChildren();
+
       ids.forEach(id => {
         const li = document.createElement("li");
         li.textContent = id;
@@ -65,11 +100,30 @@
       });
     }
 
-    async function iniciarEscaner() {
-      if (iniciando || escaner) return;
+    function procesarQR(texto) {
+      const coincidencia = texto.match(/HER-\d{4}/i);
 
-      if (typeof Html5Qrcode === "undefined") {
-        mostrar("No se cargó la biblioteca del escáner. Revisa tu conexión.");
+      if (!coincidencia) {
+        mostrar("El QR no contiene un ID HER válido.");
+        return;
+      }
+
+      const id = coincidencia[0].toUpperCase();
+
+      if (!ids.includes(id)) {
+        ids.push(id);
+        actualizarLista();
+        mostrar("Agregado: " + id);
+      } else {
+        mostrar("Ya estaba en la lista: " + id);
+      }
+    }
+
+    async function iniciarEscaner() {
+      if (iniciando) return;
+
+      if (typeof QrScanner === "undefined") {
+        mostrar("No se pudo cargar el nuevo lector QR. Revisa tu conexión.");
         return;
       }
 
@@ -77,55 +131,26 @@
       mostrar("Solicitando acceso a la cámara...");
 
       try {
-escaner = new Html5Qrcode("lectorQR", {
-  formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-  useBarCodeDetectorIfSupported: true
-});
-
-await escaner.start(
-  { facingMode: "environment" },
-  {
-    fps: 10,
-    videoConstraints: {
-      facingMode: "environment",
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
-    }
-  },
-          texto => {
-            console.log("CONTENIDO DEL QR:", texto);
-            mostrar("Contenido leído: " + texto);
-            const coincidencia = texto.match(/HER-\d{4}/i);
-            if (!coincidencia) {
-              mostrar("El QR no contiene un ID HER válido.");
-              return;
+        if (!escaner) {
+          escaner = new QrScanner(
+            video,
+            resultado => {
+              procesarQR(resultado);
+            },
+            {
+              preferredCamera: "environment",
+              maxScansPerSecond: 20,
+              highlightScanRegion: false,
+              highlightCodeOutline: false,
+              returnDetailedScanResult: false
             }
+          );
+        }
 
-            const id = coincidencia[0].toUpperCase();
-            if (!ids.includes(id)) {
-              ids.push(id);
-              actualizarLista();
-              mostrar("Agregado: " + id);
-            } else {
-              mostrar("Ya estaba en la lista: " + id);
-            }
-          },
-          () => {}
-        );
-setTimeout(() => {
-  const video = document.querySelector("#lectorQR video");
+        await escaner.start();
+        mostrar("Cámara abierta. Acerca una herramienta para escanear.");
 
-  if (video && video.videoWidth > 0) {
-    mostrar(
-      "Resolución de cámara: " +
-      video.videoWidth + " x " + video.videoHeight
-    );
-  } else {
-    mostrar("No se pudo obtener la resolución del video.");
-  }
-}, 1500);
-} catch (error) {
-        escaner = null;
+      } catch (error) {
         mostrar("No se pudo abrir la cámara: " + error);
       } finally {
         iniciando = false;
@@ -133,15 +158,16 @@ setTimeout(() => {
     }
 
     async function detenerEscaner() {
-      if (!escaner) return;
-      const lector = escaner;
-      escaner = null;
+      if (!escaner) {
+        mostrar("La cámara ya está cerrada.");
+        return;
+      }
+
       try {
-        await lector.stop();
-        await lector.clear();
+        escaner.stop();
         mostrar("Cámara cerrada.");
       } catch (error) {
-        mostrar("La cámara se cerró o ya estaba detenida.");
+        mostrar("No se pudo cerrar la cámara: " + error);
       }
     }
 
@@ -151,12 +177,11 @@ setTimeout(() => {
         return;
       }
 
-      const texto = ids.join("\n");
       try {
-        await navigator.clipboard.writeText(texto);
-        mostrar("IDs copiados. Puedes pegarlos donde los necesites.");
+        await navigator.clipboard.writeText(ids.join("\n"));
+        mostrar("IDs copiados correctamente.");
       } catch (error) {
-        mostrar("No se pudo copiar automáticamente. Selecciona y copia la lista.");
+        mostrar("No se pudo copiar automáticamente.");
       }
     }
 
@@ -165,21 +190,26 @@ setTimeout(() => {
       actualizarLista();
       mostrar("Lista limpia.");
     }
+
     function enviarAMISEG() {
-  if (!ids.length) {
-    mostrar("Primero escanea al menos una herramienta.");
-    return;
-  }
+      if (!ids.length) {
+        mostrar("Primero escanea al menos una herramienta.");
+        return;
+      }
 
-  const destino =
-    "https://script.google.com/macros/s/AKfycbzsaQIgB7K7Mj5TETUKKXkJ9i48iAno1UNPTmEw9TqI-kB_3BkgPPP1ByphmSSf88gn4A/exec";
+      const destino =
+        "https://script.google.com/macros/s/AKfycbzsaQIgB7K7Mj5TETUKKXkJ9i48iAno1UNPTmEw9TqI-kB_3BkgPPP1ByphmSSf88gn4A/exec";
 
-  const parametros = new URLSearchParams({
-    ids: ids.join(",")
-  });
+      const parametros = new URLSearchParams({
+        ids: ids.join(",")
+      });
 
-  window.open(destino + "?" + parametros.toString(), "_blank");
-}
+      window.open(
+        destino + "?" + parametros.toString(),
+        "_blank"
+      );
+    }
   </script>
+
 </body>
 </html>
