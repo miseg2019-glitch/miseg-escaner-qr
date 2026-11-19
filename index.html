@@ -79,7 +79,7 @@
       try {
 escaner = new Html5Qrcode("lectorQR", {
   formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-  useBarCodeDetectorIfSupported: false
+  useBarCodeDetectorIfSupported: true
 });
 
 await escaner.start(
