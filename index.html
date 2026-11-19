@@ -107,8 +107,17 @@ await escaner.start(
           },
           () => {}
         );
-        mostrar("Cámara activa. Escanea las herramientas una por una.");
-      } catch (error) {
+const video = document.querySelector("#lectorQR video");
+
+if (video) {
+  mostrar(
+    "Cámara activa. Resolución: " +
+    video.videoWidth + " x " + video.videoHeight
+  );
+} else {
+  mostrar("Cámara activa. No se pudo consultar la resolución.");
+}
+} catch (error) {
         escaner = null;
         mostrar("No se pudo abrir la cámara: " + error);
       } finally {
