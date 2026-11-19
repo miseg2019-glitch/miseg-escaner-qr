@@ -107,16 +107,18 @@ await escaner.start(
           },
           () => {}
         );
-const video = document.querySelector("#lectorQR video");
+setTimeout(() => {
+  const video = document.querySelector("#lectorQR video");
 
-if (video) {
-  mostrar(
-    "Cámara activa. Resolución: " +
-    video.videoWidth + " x " + video.videoHeight
-  );
-} else {
-  mostrar("Cámara activa. No se pudo consultar la resolución.");
-}
+  if (video && video.videoWidth > 0) {
+    mostrar(
+      "Resolución de cámara: " +
+      video.videoWidth + " x " + video.videoHeight
+    );
+  } else {
+    mostrar("No se pudo obtener la resolución del video.");
+  }
+}, 1500);
 } catch (error) {
         escaner = null;
         mostrar("No se pudo abrir la cámara: " + error);
